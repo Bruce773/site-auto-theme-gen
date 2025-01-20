@@ -3,6 +3,7 @@
 import { useContext, useState } from 'react';
 import { ThemeContext } from './components/ThemeContext';
 import { generateTheme } from './generator';
+import { WebPreview } from './components/WebPreview/WebPreview';
 
 export default function Home() {
   const {
@@ -11,6 +12,7 @@ export default function Home() {
   } = useContext(ThemeContext);
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const generate = async () => {
     if (!prompt.length) return;
@@ -19,11 +21,11 @@ export default function Home() {
     const data = await generateTheme({ themeDesc: prompt });
     setLoading(false);
     setTheme(data);
-    console.log(data);
+    setShowPreview(true);
   };
 
   return (
-    <div className='h-full flex items-center justify-center'>
+    <div className='mt-[40vh]'>
       <div className='flex flex-col items-start'>
         <textarea
           onKeyDown={e => {
@@ -61,6 +63,11 @@ export default function Home() {
           {loading ? 'Loading...' : 'Generate'}
         </button>
       </div>
+      {showPreview && (
+        <div className='mt-32 pb-20'>
+          <WebPreview />
+        </div>
+      )}
     </div>
   );
 }

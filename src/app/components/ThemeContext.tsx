@@ -8,6 +8,8 @@ export interface Theme {
   secondaryColor: string;
   borderColor: string;
   backgroundColor: string;
+  mainHeaderSize: string;
+  exampleText: { header: string };
 }
 
 interface ThemeContextProps {
@@ -21,6 +23,8 @@ const defaultTheme: Theme = {
   secondaryColor: '#5bc0de',
   borderColor: '#007bff',
   backgroundColor: '#ade5ff3f',
+  mainHeaderSize: '22px',
+  exampleText: { header: '' },
 };
 
 const ThemeContext = createContext<ThemeContextProps>({

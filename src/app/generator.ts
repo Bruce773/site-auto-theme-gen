@@ -7,7 +7,7 @@ const GPT = new OpenAI({
 });
 
 const getMainGenPrompt = ({ themeDesc }: { themeDesc: string }) => {
-  return `Return a website theme with the following properties: rounding: string primaryColor: string; secondaryColor: string; borderColor: string; backgroundColor: string; Return a JSON object containing those properties. Use this description for inspiration: ${themeDesc}`;
+  return `Return a website theme with the following properties: rounding: string primaryColor: string; secondaryColor: string; borderColor: string; backgroundColor: string; mainHeaderSize: string; exampleText: { header: string } Return a JSON object containing those properties. Use this description for inspiration: ${themeDesc}`;
 };
 
 export const generateTheme = async ({ themeDesc }: { themeDesc: string }) => {
