@@ -26,7 +26,7 @@ export default function Home() {
 
   return (
     <div className='mt-[40vh]'>
-      <div className='flex flex-col items-start'>
+      <div className='flex flex-col items-start ml-32'>
         <textarea
           onKeyDown={e => {
             if (e.metaKey && e.key === 'Enter') {
@@ -37,10 +37,9 @@ export default function Home() {
           onChange={e => setPrompt(e.target.value)}
           placeholder='A construction site that uses orange as their primary color...'
           style={{
-            borderColor,
-            border: 'solid 3px',
+            border: `solid 3px ${borderColor}`,
             borderRadius: rounding,
-            color: 'black',
+            color: primaryColor,
             fontSize: '22px',
             padding: '25px',
           }}
@@ -64,7 +63,7 @@ export default function Home() {
         </button>
       </div>
       {showPreview && (
-        <div className='mt-32 pb-20'>
+        <div className='mt-32 pb-20 ml-[3rem]'>
           <WebPreview />
         </div>
       )}

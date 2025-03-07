@@ -27,10 +27,10 @@ function Body({ children }: { children: React.ReactNode }) {
   return (
     <body
       style={{ background: backgroundColor }}
-      className='flex justify-center h-[100vh]'
+      className='flex flex-row justify-center h-[100vh]'
     >
       <ThemeDrawer />
-      {children}
+      <div className='h-full w-full overflow-scroll shadow-xl'>{children}</div>
     </body>
   );
 }

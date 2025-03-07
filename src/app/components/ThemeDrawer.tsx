@@ -10,9 +10,9 @@ export const ThemeDrawer = () => {
     theme[themeProp] as string;
 
   return (
-    <div className='h-[100vh] fixed top-0 left-0 bg-white p-10 shadow-lg'>
+    <div className='h-full flex-col bg-white p-10 flex'>
       {themePropsList
-        .filter(item => item !== 'exampleText')
+        .filter(item => item !== 'exampleContent')
         .map((themeProp, idx) => (
           <div className='text-black flex' key={idx}>
             {themeProp}:

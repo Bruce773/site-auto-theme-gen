@@ -7,7 +7,41 @@ const GPT = new OpenAI({
 });
 
 const getMainGenPrompt = ({ themeDesc }: { themeDesc: string }) => {
-  return `Return a website theme with the following properties: rounding: string primaryColor: string; secondaryColor: string; borderColor: string; backgroundColor: string; mainHeaderSize: string; exampleText: { header: string } Return a JSON object containing those properties. Use this description for inspiration: ${themeDesc}`;
+  return `Return a website theme with the following properties:
+  
+  {rounding: string;
+  primaryColor: string;
+  secondaryColor: string;
+  borderColor: string;
+  backgroundColor: string;
+  mainHeaderSize: string;
+  exampleContent: {
+    exampleText: { header: string; };
+    exampleImages: { pageBackground: string; smallHeaderCompanion: string };
+  }}
+
+  Create some example content that would fit this theme. The header text should be no more than 5 words.
+  
+  Generate a list of 3-5 keywords based on the theme description and use those for the pageBackground image query.
+
+  Use the Pexels API to fetch images, extract the 'src.original' field from the response, and return only **fully resolved image URLs**.
+
+  **Do NOT return API call URLs. Only return extracted image URLs.**
+
+  Example API call:
+  - Fetch: "https://api.pexels.com/v1/search?query={generated_keywords}&per_page=1"
+  - Extract: Use the first result's 'src.original' field as the image URL.
+
+  Updated exampleImages structure:
+  - pageBackground: "{Extracted Image URL from Pexels API}"
+  - smallHeaderCompanion: "{Extracted Image URL from Pexels API using exampleText.header}"
+
+  Make sure the returned JSON object contains **only direct image URLs**, so they can be used in a Next.js Image component without any extra processing.
+
+  Replace {exampleText.header} with the actual header text from the example content when making the API request.
+  Replace {generated_keywords} with the 3-5 keywords extracted from the theme description.
+
+  Return a JSON object containing those properties. Base the entire theme on this description: ${themeDesc}`;
 };
 
 export const generateTheme = async ({ themeDesc }: { themeDesc: string }) => {

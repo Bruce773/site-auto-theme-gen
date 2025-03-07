@@ -9,7 +9,10 @@ export interface Theme {
   borderColor: string;
   backgroundColor: string;
   mainHeaderSize: string;
-  exampleText: { header: string };
+  exampleContent: {
+    exampleText: { header: string };
+    exampleImages: { pageBackground: string; smallHeaderCompanion: string };
+  };
 }
 
 interface ThemeContextProps {
@@ -24,7 +27,10 @@ const defaultTheme: Theme = {
   borderColor: '#007bff',
   backgroundColor: '#ade5ff3f',
   mainHeaderSize: '22px',
-  exampleText: { header: '' },
+  exampleContent: {
+    exampleText: { header: '' },
+    exampleImages: { pageBackground: '', smallHeaderCompanion: '' },
+  },
 };
 
 const ThemeContext = createContext<ThemeContextProps>({
