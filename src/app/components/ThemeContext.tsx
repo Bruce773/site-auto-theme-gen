@@ -12,6 +12,11 @@ export interface Theme {
   exampleContent: {
     exampleText: { header: string };
     exampleImages: { pageBackground: string; smallHeaderCompanion: string };
+    htmlStructure: {
+      header?: string;
+      mainContent?: string;
+      footer?: string;
+    };
   };
 }
 
@@ -30,6 +35,11 @@ const defaultTheme: Theme = {
   exampleContent: {
     exampleText: { header: '' },
     exampleImages: { pageBackground: '', smallHeaderCompanion: '' },
+    htmlStructure: {
+      header: '',
+      mainContent: '',
+      footer: '',
+    },
   },
 };
 
