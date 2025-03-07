@@ -25,6 +25,8 @@ export const WebPreview = () => {
           style={{
             borderRadius: currentTheme.rounding,
             border: `solid 2px ${currentTheme.borderColor}`,
+            height: '208px',
+            width: '208px',
           }}
         />
         <h1
@@ -41,13 +43,12 @@ export const WebPreview = () => {
       <img
         src={currentTheme.exampleContent.exampleImages.pageBackground}
         alt='Simple Tree'
-        // width={800}
-        height={450}
         style={{
           borderRadius: currentTheme.rounding,
           // border: `solid 2px ${theme.borderColor}`,
           // marginLeft: '30px',
           width: '100%',
+          height: '50%',
         }}
       />
     </div>
