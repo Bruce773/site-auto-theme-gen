@@ -11,6 +11,7 @@ export const ThemeDrawer = () => {
 
   return (
     <div className='h-full flex-col bg-white p-10 flex'>
+      <h2 className='mb-6 text-black text-xl font-bold'>Theme Styles</h2>
       {themePropsList
         .filter(item => item !== 'exampleContent')
         .map((themeProp, idx) => (

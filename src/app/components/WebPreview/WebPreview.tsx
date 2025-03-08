@@ -1,6 +1,5 @@
 'use client';
 
-/* eslint-disable @next/next/no-img-element */
 import { useContext, useEffect, useState } from 'react';
 import { ThemeContext } from '../ThemeContext';
 import Image from 'next/image';
