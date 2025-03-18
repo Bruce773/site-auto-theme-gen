@@ -1,11 +1,6 @@
 import OpenAI from 'openai';
 import { Theme } from './components/ThemeContext';
 
-const GPT = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_GPT_API_KEY as string,
-  dangerouslyAllowBrowser: true,
-});
-
 const getMainGenPrompt = ({ themeDesc }: { themeDesc: string }) => {
   return `You are an experienced website designer with a great eye for color palette building and stock image selection to match the content. You are also a design who uses modern styling techniques when styling content on the page. You use modern concepts of padding, corner rounding, spacing, and contrasts. Your task is to generate a website theme based solely on the description provided below. Ensure every element is cohesive and visually appealing, and let the description guide the entire process.
 
@@ -93,15 +88,32 @@ Return a JSON object representing a website theme with the following exact prope
 };
 
 export const generateTheme = async ({ themeDesc }: { themeDesc: string }) => {
-  const completion = await GPT.chat.completions.create({
-    model: 'gpt-4-turbo-preview',
-    messages: [{ role: 'user', content: getMainGenPrompt({ themeDesc }) }],
-    response_format: { type: 'json_object' },
-  });
+  try {
+    const GPT = new OpenAI({
+      baseURL: 'https://api.x.ai/v1',
+      apiKey: process.env.NEXT_PUBLIC_XAI_API_KEY, // Keep this server-side
+      dangerouslyAllowBrowser: true,
+    });
 
-  const results = JSON.parse(
-    completion.choices[0]?.message?.content as string
-  ) as Theme;
+    const completion = await GPT.chat.completions.create({
+      model: 'grok-2-1212', // Verify with xAI console; could be 'grok-3'
+      messages: [{ role: 'user', content: getMainGenPrompt({ themeDesc }) }],
+      max_tokens: 1500,
+      temperature: 0.7,
+      response_format: { type: 'json_object' }, // Ensures JSON output
+    });
 
-  return results;
+    if (!completion.choices || !completion.choices[0]?.message.content) {
+      throw new Error('No valid response from the AI model.');
+    }
+
+    const results = JSON.parse(
+      completion.choices[0].message.content as string
+    ) as Theme;
+
+    return results;
+  } catch (error) {
+    console.error('Error generating theme:', error);
+    throw new Error('Failed to generate theme. Please try again later.');
+  }
 };
