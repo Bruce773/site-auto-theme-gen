@@ -1,6 +1,6 @@
 // generator.ts
-import { callApiAndParse } from './utils';
-import { BaseTheme, ExampleText, ExampleImages } from './types';
+import { callApiAndParse } from '@/utils';
+import { BaseTheme, ExampleText, ExampleImages } from '@/types';
 
 // Detailed prompt functions
 const getThemePrompt = (themeDesc: string): string => `
@@ -90,7 +90,7 @@ const getFooterPrompt = (themeDesc: string, theme: BaseTheme): string => `
   Style the HTML with theme colors and modern design.
 `;
 
-// Generator functions
+// Generator functions with fallbacks
 export const generateBaseTheme = (themeDesc: string): Promise<BaseTheme> =>
   callApiAndParse<BaseTheme>(getThemePrompt(themeDesc), 500, {
     rounding: 'small',
@@ -155,7 +155,6 @@ export const generateMainContent = (
   theme: BaseTheme,
   images?: ExampleImages
 ): Promise<{ htmlStructure: { mainContent: string } }> => {
-  // Define fallback images if images is undefined
   const fallbackImages = {
     pageBackground:
       'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg',

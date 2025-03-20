@@ -1,9 +1,9 @@
 'use client';
 
 import './globals.css';
-import { ThemeContext, ThemeProvider } from './components/ThemeContext';
+import { ThemeContext, ThemeProvider } from '@/components/ThemeContext';
 import { useContext } from 'react';
-import { ThemeDrawer } from './components/ThemeDrawer';
+import { ThemeDrawer } from '@/components/ThemeDrawer';
 
 export default function RootLayout({
   children,
