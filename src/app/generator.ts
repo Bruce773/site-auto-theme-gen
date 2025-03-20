@@ -124,13 +124,16 @@ const getMainContentPrompt = (
 `;
 
 const getFooterPrompt = (themeDesc: string, theme: BaseTheme): string => `
-  For "${themeDesc}" with theme ${JSON.stringify(theme)}, return:
+  For "${themeDesc}" with theme ${JSON.stringify(
+  theme
+)}, return a JSON object in the following format:
   {
     "htmlStructure": {
       "footer": "string" // HTML with contact and social links
     }
   }
-  Style with theme colors and modern design.
+  Ensure the response is valid JSON. Escape any special characters (e.g., quotes, newlines) in the HTML string to prevent JSON parsing errors.
+  Style the HTML with theme colors and modern design.
 `;
 
 // Generation functions with improved error handling
@@ -353,10 +356,43 @@ export async function generateFooter(
       throw new Error('No valid response from the AI model for footer');
     }
 
-    const result = JSON.parse(
-      completion.choices[0].message.content as string
-    ) as { htmlStructure: { footer: string } };
-    return result;
+    const rawResponse = completion.choices[0].message.content as string;
+    console.log('Raw footer response:', rawResponse); // Debug log
+
+    // Validate JSON before parsing
+    try {
+      const result = JSON.parse(rawResponse) as {
+        htmlStructure: { footer: string };
+      };
+
+      // Validate the structure
+      if (
+        !result.htmlStructure ||
+        typeof result.htmlStructure.footer !== 'string'
+      ) {
+        throw new Error('Invalid footer structure in response');
+      }
+
+      return result;
+    } catch (parseError) {
+      console.error('Failed to parse footer response:', parseError);
+      // Fallback footer
+      return {
+        htmlStructure: {
+          footer: `<footer style="background-color: ${theme.secondaryColor}; padding: 1rem; border-radius: ${theme.rounding}; color: white;">
+                    <div style="max-width: 1200px; margin: 0 auto;">
+                      <p>Contact Us: info@example.com</p>
+                      <ul style="list-style: none; display: flex; gap: 1rem;">
+                        <li><a href="#" style="color: white;">Facebook</a></li>
+                        <li><a href="#" style="color: white;">Twitter</a></li>
+                        <li><a href="#" style="color: white;">Instagram</a></li>
+                      </ul>
+                      <p style="margin-top: 1rem;">© 2025 Your Company</p>
+                    </div>
+                  </footer>`,
+        },
+      };
+    }
   } catch (error) {
     console.error('Error generating footer:', error);
     throw new Error('Failed to generate footer: ' + (error as Error).message);
