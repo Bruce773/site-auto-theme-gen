@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { ThemeContext } from '@/app/components/ThemeContext';
-import { BaseTheme } from '@/app/generator';
+import { BaseTheme } from '@/app/types';
 
 export const ThemeDrawer = () => {
   const { theme } = useContext(ThemeContext);

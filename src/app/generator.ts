@@ -1,57 +1,8 @@
-import OpenAI from 'openai';
+// generator.ts
+import { callApiAndParse } from './utils';
+import { BaseTheme, ExampleText, ExampleImages } from './types';
 
-// Define TypeScript interfaces for the expected return types
-export interface BaseTheme {
-  rounding: 'none' | 'small' | 'medium' | 'large';
-  primaryColor: string;
-  secondaryColor: string;
-  borderColor: string;
-  backgroundColor: string;
-  mainHeaderSize: string;
-}
-
-export interface ExampleText {
-  header: string;
-}
-
-export interface ExampleImages {
-  pageBackground: string;
-  smallHeaderCompanion: string;
-}
-
-export interface HtmlStructure {
-  header?: string;
-  mainContent?: string;
-  footer?: string;
-}
-
-// Base AI client setup with retry logic
-const initializeAIClient = (): OpenAI => {
-  return new OpenAI({
-    baseURL: 'https://api.x.ai/v1',
-    apiKey: process.env.NEXT_PUBLIC_XAI_API_KEY,
-    dangerouslyAllowBrowser: true,
-  });
-};
-
-// Utility function for retrying API calls
-const withRetry = async <T>(
-  fn: () => Promise<T>,
-  retries: number = 3,
-  delay: number = 1000
-): Promise<T> => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (error) {
-      if (i === retries - 1) throw error;
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-  throw new Error('Max retries reached');
-};
-
-// Prompt functions (unchanged for brevity)
+// Detailed prompt functions
 const getThemePrompt = (themeDesc: string): string => `
   You are an experienced website designer with expertise in color palettes and modern styling.
   Based solely on this description: "${themeDesc}", return a JSON object with:
@@ -139,295 +90,109 @@ const getFooterPrompt = (themeDesc: string, theme: BaseTheme): string => `
   Style the HTML with theme colors and modern design.
 `;
 
-// Generation functions with improved error handling
-export async function generateBaseTheme(themeDesc: string): Promise<BaseTheme> {
-  try {
-    const GPT = initializeAIClient();
-    const completion = await withRetry(() =>
-      GPT.chat.completions.create({
-        model: 'grok-2-1212',
-        messages: [{ role: 'user', content: getThemePrompt(themeDesc) }],
-        max_tokens: 500,
-        temperature: 0.7,
-        response_format: { type: 'json_object' },
-      })
-    );
+// Generator functions
+export const generateBaseTheme = (themeDesc: string): Promise<BaseTheme> =>
+  callApiAndParse<BaseTheme>(getThemePrompt(themeDesc), 500, {
+    rounding: 'small',
+    primaryColor: '#007BFF',
+    secondaryColor: '#FFC107',
+    borderColor: '#343A40',
+    backgroundColor: '#F8F9FA',
+    mainHeaderSize: '36px',
+  });
 
-    if (!completion.choices || !completion.choices[0]?.message.content) {
-      throw new Error('No valid response from the AI model for base theme');
-    }
-
-    const result = JSON.parse(
-      completion.choices[0].message.content as string
-    ) as BaseTheme;
-    return result;
-  } catch (error) {
-    console.error('Error generating base theme:', error);
-    throw new Error(
-      'Failed to generate base theme: ' + (error as Error).message
-    );
-  }
-}
-
-export async function generateContent(
+export const generateContent = (
   themeDesc: string,
   theme: BaseTheme
-): Promise<{ exampleText: ExampleText }> {
-  try {
-    const GPT = initializeAIClient();
-    const completion = await withRetry(() =>
-      GPT.chat.completions.create({
-        model: 'grok-2-1212',
-        messages: [
-          { role: 'user', content: getContentPrompt(themeDesc, theme) },
-        ],
-        max_tokens: 300,
-        temperature: 0.7,
-        response_format: { type: 'json_object' },
-      })
-    );
+): Promise<{ exampleText: ExampleText }> =>
+  callApiAndParse<{ exampleText: ExampleText }>(
+    getContentPrompt(themeDesc, theme),
+    300,
+    { exampleText: { header: 'Default Header' } }
+  );
 
-    if (!completion.choices || !completion.choices[0]?.message.content) {
-      throw new Error('No valid response from the AI model for content');
-    }
-
-    const result = JSON.parse(
-      completion.choices[0].message.content as string
-    ) as { exampleText: ExampleText };
-    return result;
-  } catch (error) {
-    console.error('Error generating content:', error);
-    throw new Error('Failed to generate content: ' + (error as Error).message);
-  }
-}
-
-export async function generateImages(
+export const generateImages = (
   themeDesc: string
-): Promise<{ exampleImages: ExampleImages }> {
-  try {
-    const GPT = initializeAIClient();
-    const completion = await withRetry(() =>
-      GPT.chat.completions.create({
-        model: 'grok-2-1212',
-        messages: [{ role: 'user', content: getImagesPrompt(themeDesc) }],
-        max_tokens: 400,
-        temperature: 0.7,
-        response_format: { type: 'json_object' },
-      })
-    );
-
-    if (!completion.choices || !completion.choices[0]?.message.content) {
-      throw new Error('No valid response from the AI model for images');
+): Promise<{ exampleImages: ExampleImages }> =>
+  callApiAndParse<{ exampleImages: ExampleImages }>(
+    getImagesPrompt(themeDesc),
+    400,
+    {
+      exampleImages: {
+        pageBackground:
+          'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg',
+        smallHeaderCompanion:
+          'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg',
+      },
     }
+  );
 
-    const result = JSON.parse(
-      completion.choices[0].message.content as string
-    ) as { exampleImages: ExampleImages };
-    return result;
-  } catch (error) {
-    console.error('Error generating images:', error);
-    throw new Error('Failed to generate images: ' + (error as Error).message);
-  }
-}
-
-export async function generateHeader(
+export const generateHeader = (
   themeDesc: string,
   theme: BaseTheme,
   headerText: string
-): Promise<{ htmlStructure: { header: string } }> {
-  try {
-    const GPT = initializeAIClient();
-    const completion = await withRetry(() =>
-      GPT.chat.completions.create({
-        model: 'grok-2-1212',
-        messages: [
-          {
-            role: 'user',
-            content: getHeaderPrompt(themeDesc, theme, headerText),
-          },
-        ],
-        max_tokens: 400,
-        temperature: 0.7,
-        response_format: { type: 'json_object' },
-      })
-    );
-
-    if (!completion.choices || !completion.choices[0]?.message.content) {
-      throw new Error('No valid response from the AI model for header');
+): Promise<{ htmlStructure: { header: string } }> =>
+  callApiAndParse<{ htmlStructure: { header: string } }>(
+    getHeaderPrompt(themeDesc, theme, headerText),
+    400,
+    {
+      htmlStructure: {
+        header: `<header style="background-color: ${theme.primaryColor}; padding: 1rem; border-radius: ${theme.rounding}; color: white;">
+                  <h1>${headerText}</h1>
+                  <nav><ul style="list-style: none; display: flex; gap: 1rem;">
+                    <li><a href="#" style="color: white;">Home</a></li>
+                    <li><a href="#" style="color: white;">About</a></li>
+                    <li><a href="#" style="color: white;">Services</a></li>
+                    <li><a href="#" style="color: white;">Contact</a></li>
+                  </ul></nav>
+                </header>`,
+      },
     }
+  );
 
-    const rawResponse = completion.choices[0].message.content as string;
-    console.log('Raw header response:', rawResponse); // Debug log
-
-    // Validate JSON before parsing
-    try {
-      const result = JSON.parse(rawResponse) as {
-        htmlStructure: { header: string };
-      };
-
-      // Validate the structure
-      if (
-        !result.htmlStructure ||
-        typeof result.htmlStructure.header !== 'string'
-      ) {
-        throw new Error('Invalid header structure in response');
-      }
-
-      return result;
-    } catch (parseError) {
-      console.error('Failed to parse header response:', parseError);
-      // Fallback header
-      return {
-        htmlStructure: {
-          header: `<header style="background-color: ${theme.primaryColor}; padding: 1rem; border-radius: ${theme.rounding}; color: white;">
-                    <h1>${headerText}</h1>
-                    <nav>
-                      <ul style="list-style: none; display: flex; gap: 1rem;">
-                        <li><a href="#" style="color: white;">Home</a></li>
-                        <li><a href="#" style="color: white;">About</a></li>
-                        <li><a href="#" style="color: white;">Services</a></li>
-                        <li><a href="#" style="color: white;">Contact</a></li>
-                      </ul>
-                    </nav>
-                  </header>`,
-        },
-      };
-    }
-  } catch (error) {
-    console.error('Error generating header:', error);
-    throw new Error('Failed to generate header: ' + (error as Error).message);
-  }
-}
-
-export async function generateMainContent(
+export const generateMainContent = (
   themeDesc: string,
   theme: BaseTheme,
-  images: ExampleImages
-): Promise<{ htmlStructure: { mainContent: string } }> {
-  try {
-    const GPT = initializeAIClient();
-    const completion = await withRetry(() =>
-      GPT.chat.completions.create({
-        model: 'grok-2-1212',
-        messages: [
-          {
-            role: 'user',
-            content: getMainContentPrompt(themeDesc, theme, images),
-          },
-        ],
-        max_tokens: 500,
-        temperature: 0.7,
-        response_format: { type: 'json_object' },
-      })
-    );
+  images?: ExampleImages
+): Promise<{ htmlStructure: { mainContent: string } }> => {
+  // Define fallback images if images is undefined
+  const fallbackImages = {
+    pageBackground:
+      'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg',
+    smallHeaderCompanion:
+      'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg',
+  };
+  const imagesToUse = images || fallbackImages;
 
-    if (!completion.choices || !completion.choices[0]?.message.content) {
-      throw new Error('No valid response from the AI model for main content');
-    }
-
-    const rawResponse = completion.choices[0].message.content as string;
-    console.log('Raw main content response:', rawResponse); // Debug log
-
-    // Validate JSON before parsing
-    try {
-      const result = JSON.parse(rawResponse) as {
-        htmlStructure: { mainContent: string };
-      };
-
-      // Validate the structure
-      if (
-        !result.htmlStructure ||
-        typeof result.htmlStructure.mainContent !== 'string'
-      ) {
-        throw new Error('Invalid main content structure in response');
-      }
-
-      return result;
-    } catch (parseError) {
-      console.error('Failed to parse main content response:', parseError);
-      // Fallback main content
-      return {
-        htmlStructure: {
-          mainContent: `<section style="background-color: ${theme.backgroundColor}; padding: 2rem; border-radius: ${theme.rounding};">
-                          <div style="background-image: url(${images.pageBackground}); background-size: cover; background-position: center; height: 300px; border-radius: ${theme.rounding};">
-                            <h2 style="color: ${theme.primaryColor}; padding: 1rem; text-align: center;">Welcome to Our Site</h2>
+  return callApiAndParse<{ htmlStructure: { mainContent: string } }>(
+    getMainContentPrompt(themeDesc, theme, imagesToUse),
+    500,
+    {
+      htmlStructure: {
+        mainContent: `<section style="background-color: ${theme.backgroundColor}; padding: 2rem; border-radius: ${theme.rounding};">
+                          <div style="background-image: url(${imagesToUse.pageBackground}); background-size: cover; height: 300px; border-radius: ${theme.rounding};">
+                            <h2 style="color: ${theme.primaryColor}; padding: 1rem; text-align: center;">Welcome</h2>
                           </div>
-                          <p style="color: ${theme.secondaryColor}; margin-top: 1rem; text-align: center;">
-                            Discover our services and solutions.
-                          </p>
+                          <p style="color: ${theme.secondaryColor}; margin-top: 1rem; text-align: center;">Discover more.</p>
                         </section>`,
-        },
-      };
+      },
     }
-  } catch (error) {
-    console.error('Error generating main content:', error);
-    throw new Error(
-      'Failed to generate main content: ' + (error as Error).message
-    );
-  }
-}
+  );
+};
 
-export async function generateFooter(
+export const generateFooter = (
   themeDesc: string,
   theme: BaseTheme
-): Promise<{ htmlStructure: { footer: string } }> {
-  try {
-    const GPT = initializeAIClient();
-    const completion = await withRetry(() =>
-      GPT.chat.completions.create({
-        model: 'grok-2-1212',
-        messages: [
-          { role: 'user', content: getFooterPrompt(themeDesc, theme) },
-        ],
-        max_tokens: 300,
-        temperature: 0.7,
-        response_format: { type: 'json_object' },
-      })
-    );
-
-    if (!completion.choices || !completion.choices[0]?.message.content) {
-      throw new Error('No valid response from the AI model for footer');
+): Promise<{ htmlStructure: { footer: string } }> =>
+  callApiAndParse<{ htmlStructure: { footer: string } }>(
+    getFooterPrompt(themeDesc, theme),
+    300,
+    {
+      htmlStructure: {
+        footer: `<footer style="background-color: ${theme.secondaryColor}; padding: 1rem; border-radius: ${theme.rounding}; color: white;">
+                  <p>Contact: info@example.com</p>
+                  <p>© 2025 Your Company</p>
+                </footer>`,
+      },
     }
-
-    const rawResponse = completion.choices[0].message.content as string;
-    console.log('Raw footer response:', rawResponse); // Debug log
-
-    // Validate JSON before parsing
-    try {
-      const result = JSON.parse(rawResponse) as {
-        htmlStructure: { footer: string };
-      };
-
-      // Validate the structure
-      if (
-        !result.htmlStructure ||
-        typeof result.htmlStructure.footer !== 'string'
-      ) {
-        throw new Error('Invalid footer structure in response');
-      }
-
-      return result;
-    } catch (parseError) {
-      console.error('Failed to parse footer response:', parseError);
-      // Fallback footer
-      return {
-        htmlStructure: {
-          footer: `<footer style="background-color: ${theme.secondaryColor}; padding: 1rem; border-radius: ${theme.rounding}; color: white;">
-                    <div style="max-width: 1200px; margin: 0 auto;">
-                      <p>Contact Us: info@example.com</p>
-                      <ul style="list-style: none; display: flex; gap: 1rem;">
-                        <li><a href="#" style="color: white;">Facebook</a></li>
-                        <li><a href="#" style="color: white;">Twitter</a></li>
-                        <li><a href="#" style="color: white;">Instagram</a></li>
-                      </ul>
-                      <p style="margin-top: 1rem;">© 2025 Your Company</p>
-                    </div>
-                  </footer>`,
-        },
-      };
-    }
-  } catch (error) {
-    console.error('Error generating footer:', error);
-    throw new Error('Failed to generate footer: ' + (error as Error).message);
-  }
-}
+  );

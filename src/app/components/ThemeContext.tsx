@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useState, ReactNode } from 'react';
-import { BaseTheme } from '@/app/generator';
+import { BaseTheme } from '@/app/types';
 
 interface ThemeContextProps {
   theme: BaseTheme;
