@@ -13,98 +13,144 @@ import {
   generateHeader,
   generateImages,
   generateMainContent,
-  HtmlStructure,
 } from '@/app/generator';
 
 export default function Home() {
   const { theme, setTheme } = useContext(ThemeContext);
-  const { rounding, borderColor, primaryColor } = theme;
-  const [prompt, setPrompt] = useState('');
-  const [content, setContent] = useState<ExampleText>({} as ExampleText);
-  const [images, setImages] = useState<ExampleImages>({} as ExampleImages);
-  const [header, setHeader] = useState<HtmlStructure['header']>(
-    {} as HtmlStructure['header']
-  );
-  const [mainContent, setMainContent] = useState<HtmlStructure['mainContent']>(
-    {} as HtmlStructure['mainContent']
-  );
-  const [footer, setFooter] = useState<HtmlStructure['footer']>(
-    {} as HtmlStructure['footer']
-  );
-  const [loading, setLoading] = useState({
-    1: false,
-    2: false,
-    3: false,
-    4: false,
-    5: false,
-    6: false,
-  });
+  const {
+    rounding,
+    borderColor,
+    primaryColor,
+    secondaryColor,
+    mainHeaderSize,
+  } = theme;
 
-  const handleGeneration = async ({
-    sectId,
-    gen,
-  }: {
-    sectId: number;
-    gen: () => Promise<void>;
-  }) => {
-    setLoading(prevLoading => ({ ...prevLoading, [sectId]: true }));
-    await gen();
-    setLoading(prevLoading => ({ ...prevLoading, [sectId]: false }));
+  // State declarations
+  const [prompt, setPrompt] = useState('');
+  const [content, setContent] = useState<ExampleText | null>(null);
+  const [images, setImages] = useState<ExampleImages | null>(null);
+  const [headerHtml, setHeaderHtml] = useState<string | null>(null);
+  const [mainContentHtml, setMainContentHtml] = useState<string | null>(null);
+  const [footerHtml, setFooterHtml] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [failedStep, setFailedStep] = useState<string | null>(null);
+
+  // Retry function for a specific step
+  const retryStep = async (step: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      switch (step) {
+        case 'images':
+          const imagesResult = await generateImages(prompt);
+          setImages(imagesResult.exampleImages);
+          break;
+        case 'header':
+          if (!content)
+            throw new Error('Content not available for header generation');
+          const headerResult = await generateHeader(
+            prompt,
+            theme,
+            content.header
+          );
+          setHeaderHtml(headerResult.htmlStructure.header);
+          break;
+        case 'mainContent':
+          if (!images)
+            throw new Error('Images not available for main content generation');
+          const mainContentResult = await generateMainContent(
+            prompt,
+            theme,
+            images
+          );
+          setMainContentHtml(mainContentResult.htmlStructure.mainContent);
+          break;
+        case 'footer':
+          const footerResult = await generateFooter(prompt, theme);
+          setFooterHtml(footerResult.htmlStructure.footer);
+          break;
+        default:
+          throw new Error('Invalid step for retry');
+      }
+      setFailedStep(null);
+    } catch (err) {
+      setError(`Failed to retry ${step}: ${(err as Error).message}`);
+      setFailedStep(step);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Generate function with sequential async calls
   const generate = async () => {
     if (!prompt.length) return;
+    setLoading(true);
+    setError(null);
+    setFailedStep(null);
 
-    await handleGeneration({
-      sectId: 1,
-      gen: async () => {
-        const baseTheme: BaseTheme = await generateBaseTheme(prompt);
-        setTheme(baseTheme);
-      },
-    });
-    await handleGeneration({
-      sectId: 2,
-      gen: async () => {
-        const content: { exampleText: ExampleText } = await generateContent(
-          prompt,
-          theme
+    try {
+      // Step 1: Generate base theme
+      const baseTheme: BaseTheme = await generateBaseTheme(prompt);
+      setTheme(baseTheme);
+
+      // Step 2: Generate content
+      const contentResult: { exampleText: ExampleText } = await generateContent(
+        prompt,
+        baseTheme
+      );
+      setContent(contentResult.exampleText);
+
+      // Step 3: Generate images
+      try {
+        const imagesResult: { exampleImages: ExampleImages } =
+          await generateImages(prompt);
+        setImages(imagesResult.exampleImages);
+      } catch (err) {
+        setFailedStep('images');
+        throw new Error(`Failed at images step: ${(err as Error).message}`);
+      }
+
+      // Step 4: Generate header
+      try {
+        const headerResult: { htmlStructure: { header: string } } =
+          await generateHeader(
+            prompt,
+            baseTheme,
+            contentResult.exampleText.header
+          );
+        setHeaderHtml(headerResult.htmlStructure.header);
+      } catch (err) {
+        setFailedStep('header');
+        throw new Error(`Failed at header step: ${(err as Error).message}`);
+      }
+
+      // Step 5: Generate main content
+      try {
+        const mainContentResult: { htmlStructure: { mainContent: string } } =
+          await generateMainContent(prompt, baseTheme, images as ExampleImages);
+        setMainContentHtml(mainContentResult.htmlStructure.mainContent);
+      } catch (err) {
+        setFailedStep('mainContent');
+        throw new Error(
+          `Failed at main content step: ${(err as Error).message}`
         );
-        setContent(content.exampleText);
-      },
-    });
-    handleGeneration({
-      sectId: 4,
-      gen: async () => {
-        const header: { htmlStructure: { header: string } } =
-          await generateHeader(prompt, theme, content.header);
-        setHeader(header.htmlStructure.header);
-      },
-    });
-    await handleGeneration({
-      sectId: 3,
-      gen: async () => {
-        const images: { exampleImages: ExampleImages } = await generateImages(
-          prompt
-        );
-        setImages(images.exampleImages);
-      },
-    });
-    handleGeneration({
-      sectId: 5,
-      gen: async () => {
-        const mainContent: { htmlStructure: { mainContent: string } } =
-          await generateMainContent(prompt, theme, images);
-        setMainContent(mainContent.htmlStructure.mainContent);
-      },
-    });
-    handleGeneration({
-      sectId: 6,
-      gen: async () => {
-        const footer: { htmlStructure: { footer: string } } =
-          await generateFooter(prompt, theme);
-        setFooter(footer.htmlStructure.footer);
-      },
-    });
+      }
+
+      // Step 6: Generate footer
+      try {
+        const footerResult: { htmlStructure: { footer: string } } =
+          await generateFooter(prompt, baseTheme);
+        setFooterHtml(footerResult.htmlStructure.footer);
+      } catch (err) {
+        setFailedStep('footer');
+        throw new Error(`Failed at footer step: ${(err as Error).message}`);
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -131,12 +177,10 @@ export default function Home() {
         />
         <button
           onClick={generate}
-          disabled={Object.values(loading).some(isLoading => isLoading)}
+          disabled={loading}
           style={{
             marginTop: '20px',
-            backgroundColor: Object.values(loading).some(isLoading => isLoading)
-              ? 'grey'
-              : primaryColor,
+            backgroundColor: loading ? 'grey' : primaryColor,
             borderColor,
             color: 'white',
             padding: '10px 20px',
@@ -144,72 +188,79 @@ export default function Home() {
             fontSize: '20px',
           }}
         >
-          {Object.values(loading).some(isLoading => isLoading)
-            ? 'Loading...'
-            : 'Generate'}
+          {loading ? 'Loading...' : 'Generate'}
         </button>
+        {error && (
+          <div style={{ marginTop: '10px' }}>
+            <p style={{ color: 'red' }}>{error}</p>
+            {failedStep && (
+              <button
+                onClick={() => retryStep(failedStep)}
+                style={{
+                  marginTop: '5px',
+                  backgroundColor: primaryColor,
+                  color: 'white',
+                  padding: '5px 10px',
+                  borderRadius: rounding,
+                }}
+              >
+                Retry {failedStep}
+              </button>
+            )}
+          </div>
+        )}
       </div>
       <div className='mt-32 pb-20 ml-[3rem]'>
         <div className='flex flex-col max-w-5xl'>
-          {!loading[4].valueOf() ? (
-            <div
-              className='flex mb-5'
-              dangerouslySetInnerHTML={{
-                __html: header || '',
-              }}
-            />
-          ) : (
+          {loading ? (
             <div>Loading...</div>
-          )}
-          <div className='flex flex-row items-center mb-10'>
-            {!loading[3].valueOf() && images?.smallHeaderCompanion?.length > 0 ? (
-              <Image
-                src={images.smallHeaderCompanion}
-                alt=''
-                width={208}
-                height={208}
-                style={{
-                  borderRadius: theme.rounding,
-                  border: `solid 2px ${theme.borderColor}`,
-                }}
-              />
-            ) : (
-              <div>Loading...</div>
-            )}
-            {!loading[2].valueOf() ? (
-              <h1
-                style={{
-                  fontSize: theme.mainHeaderSize,
-                  color: theme.secondaryColor,
-                  marginLeft: '30px',
-                  maxWidth: '400px',
-                }}
-              >
-                {content.header}
-              </h1>
-            ) : (
-              <div>Loading...</div>
-            )}
-          </div>
-          {!loading[5].valueOf() ? (
-            <div
-              className='flex mb-5'
-              dangerouslySetInnerHTML={{
-                __html: mainContent || '',
-              }}
-            />
           ) : (
-            <div>Loading...</div>
-          )}
-          {!loading[6].valueOf() ? (
-            <div
-              className='flex mb-5'
-              dangerouslySetInnerHTML={{
-                __html: footer || '',
-              }}
-            />
-          ) : (
-            <div>Loading...</div>
+            <>
+              {headerHtml && (
+                <div
+                  className='flex mb-5'
+                  dangerouslySetInnerHTML={{ __html: headerHtml }}
+                />
+              )}
+              <div className='flex flex-row items-center mb-10'>
+                {images?.smallHeaderCompanion && (
+                  <Image
+                    src={images.smallHeaderCompanion}
+                    alt=''
+                    width={208}
+                    height={208}
+                    style={{
+                      borderRadius: theme.rounding,
+                      border: `solid 2px ${theme.borderColor}`,
+                    }}
+                  />
+                )}
+                {content?.header && (
+                  <h1
+                    style={{
+                      fontSize: mainHeaderSize,
+                      color: secondaryColor,
+                      marginLeft: '30px',
+                      maxWidth: '400px',
+                    }}
+                  >
+                    {content.header}
+                  </h1>
+                )}
+              </div>
+              {mainContentHtml && (
+                <div
+                  className='flex mb-5'
+                  dangerouslySetInnerHTML={{ __html: mainContentHtml }}
+                />
+              )}
+              {footerHtml && (
+                <div
+                  className='flex mb-5'
+                  dangerouslySetInnerHTML={{ __html: footerHtml }}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

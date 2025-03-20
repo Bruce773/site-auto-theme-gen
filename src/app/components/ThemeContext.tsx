@@ -9,7 +9,7 @@ interface ThemeContextProps {
 }
 
 const defaultTheme: BaseTheme = {
-  rounding: '4px',
+  rounding: 'small',
   primaryColor: '#007bff',
   secondaryColor: '#5bc0de',
   borderColor: '#007bff',
