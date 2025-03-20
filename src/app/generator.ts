@@ -114,13 +114,16 @@ const getMainContentPrompt = (
 ): string => `
   For "${themeDesc}" with theme ${JSON.stringify(
   theme
-)} and images ${JSON.stringify(images)}, return:
+)} and images ${JSON.stringify(
+  images
+)}, return a JSON object in the following format:
   {
     "htmlStructure": {
       "mainContent": "string" // HTML with hero image and text
     }
   }
-  Style with theme colors, modern spacing, and include images.
+  Ensure the response is valid JSON. Escape any special characters (e.g., quotes, newlines) in the HTML string to prevent JSON parsing errors.
+  Style the HTML with theme colors, modern spacing, and include the provided images.
 `;
 
 const getFooterPrompt = (themeDesc: string, theme: BaseTheme): string => `
@@ -322,10 +325,40 @@ export async function generateMainContent(
       throw new Error('No valid response from the AI model for main content');
     }
 
-    const result = JSON.parse(
-      completion.choices[0].message.content as string
-    ) as { htmlStructure: { mainContent: string } };
-    return result;
+    const rawResponse = completion.choices[0].message.content as string;
+    console.log('Raw main content response:', rawResponse); // Debug log
+
+    // Validate JSON before parsing
+    try {
+      const result = JSON.parse(rawResponse) as {
+        htmlStructure: { mainContent: string };
+      };
+
+      // Validate the structure
+      if (
+        !result.htmlStructure ||
+        typeof result.htmlStructure.mainContent !== 'string'
+      ) {
+        throw new Error('Invalid main content structure in response');
+      }
+
+      return result;
+    } catch (parseError) {
+      console.error('Failed to parse main content response:', parseError);
+      // Fallback main content
+      return {
+        htmlStructure: {
+          mainContent: `<section style="background-color: ${theme.backgroundColor}; padding: 2rem; border-radius: ${theme.rounding};">
+                          <div style="background-image: url(${images.pageBackground}); background-size: cover; background-position: center; height: 300px; border-radius: ${theme.rounding};">
+                            <h2 style="color: ${theme.primaryColor}; padding: 1rem; text-align: center;">Welcome to Our Site</h2>
+                          </div>
+                          <p style="color: ${theme.secondaryColor}; margin-top: 1rem; text-align: center;">
+                            Discover our services and solutions.
+                          </p>
+                        </section>`,
+        },
+      };
+    }
   } catch (error) {
     console.error('Error generating main content:', error);
     throw new Error(
