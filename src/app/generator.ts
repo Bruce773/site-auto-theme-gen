@@ -1,119 +1,296 @@
 import OpenAI from 'openai';
-import { Theme } from './components/ThemeContext';
 
-const getMainGenPrompt = ({ themeDesc }: { themeDesc: string }) => {
-  return `You are an experienced website designer with a great eye for color palette building and stock image selection to match the content. You are also a design who uses modern styling techniques when styling content on the page. You use modern concepts of padding, corner rounding, spacing, and contrasts. Your task is to generate a website theme based solely on the description provided below. Ensure every element is cohesive and visually appealing, and let the description guide the entire process.
-
-Return a JSON object representing a website theme with the following exact properties:
-
-{
-  "rounding": "string", // Defines the border-radius of elements (e.g., "none", "small", "medium", "large").
-  "primaryColor": "string", // Main color for emphasis. Ensure high contrast with the background.
-  "secondaryColor": "string", // Accent color that must contrast well with the backgroundColor.
-  "borderColor": "string", // Color used for borders that matches the theme's aesthetics.
-  "backgroundColor": "string", // Primary background color for the website.
-  "mainHeaderSize": "string", // Font size for the main header (between 28px-40px).
-  "exampleContent": {
-    "exampleText": {
-      "header": "string" // Concise header text (4-6 words).
-    },
-    "exampleImages": {
-      "pageBackground": "string", // **Landscape-oriented** background image (width > height).
-      "smallHeaderCompanion": "string" // **Square** image (width = height) matching the header theme.
-    },
-    "htmlStructure": {
-      "header": "string", // HTML code for the header section (e.g., h1, navigation bar, logo).
-      "mainContent": "string", // HTML code for the main content section (e.g., text, images, links).
-      "footer": "string" // HTML code for the footer section (e.g., contact info, social media links).
-    }
-  }
-}
-
-**Content Generation Rules:**
-- The header text must consist of **4-6 words**.
-- The **secondaryColor** must contrast sufficiently with the **backgroundColor** for legibility and aesthetic appeal.
-- **mainHeaderSize** should be between **28px and 40px**.
-
-**Image Selection Rules:**
-- Generate **3-5 relevant keywords** directly from the **themeDesc**. These keywords should be specific to the description provided, without any added context or assumptions.
-  - For example, if the description is "A coffee shop with gold, brown, and green. French cottage feel. Simple and elegant," you would use terms directly from that input such as "coffee shop," "gold," "brown," "green," "French cottage," "simple," and "elegant."
-- Use the **Pexels API** (or another stock image source, if necessary) to fetch images based on the **generated_keywords**:
-  - **pageBackground**: A **landscape-oriented** image related to the keywords from the description.
-  - **smallHeaderCompanion**: A **square** image related to the header text from the description.
-- Extract the **direct image URLs** from the \`src.original\` field. Ensure the images match the tone and elements from the **themeDesc**.
-- If no suitable images are found, retry fetching using alternative variations of the keywords directly derived from **themeDesc**.
-
-**HTML Structure Generation:**
-- **header**: Generate HTML for a header section with the following structure (you can adjust it based on the description):
-  - Logo or site name ('<h1>' element).
-  - A navigation bar ('<nav>' element) with placeholder links.
-  - All content should be styled to match the theme and should look visually appealing. Use the primary and secondary colors appropriately.
-- **mainContent**: Generate HTML for the main content, which could include:
-  - A section for a large hero image with background ('<div>' or '<section>').
-  - Text content (use placeholders like "Welcome to our site" or "Discover our coffee shop"). 
-  - All content should be styled to match the theme and should look visually appealing. Use the primary and secondary colors appropriately.
-  - Example images (e.g., '<img>' tags for the background and companion image).
-- **footer**: Generate HTML for a footer with placeholders for contact information, social media links, etc.
-- All content should be styled to match the theme and should look visually appealing. Use the primary and secondary colors appropriately.
-
-**Example API Call:**
-- Fetch: \`https://api.pexels.com/v1/search?query={generated_keywords}&per_page=1\`
-- Extract: Use the **first result’s** \`src.original\` field.
-
-**Final Output Format (Example):**
-{
-  "rounding": "medium",
-  "primaryColor": "#1E90FF",
-  "secondaryColor": "#FFD700",
-  "borderColor": "#CCCCCC",
-  "backgroundColor": "#FFFFFF",
-  "mainHeaderSize": "32px",
-  "exampleContent": {
-    "exampleText": {
-      "header": "Elegant Minimalist Design"
-    },
-    "exampleImages": {
-      "pageBackground": "https://images.pexels.com/photos/123456/original.jpg",
-      "smallHeaderCompanion": "https://images.pexels.com/photos/789012/original.jpg"
-    },
-    "htmlStructure": {
-      "header": "<header><h1>Elegant Minimalist Design</h1><nav><ul><li><a href='#'>Home</a></li><li><a href='#'>About</a></li><li><a href='#'>Services</a></li><li><a href='#'>Contact</a></li></ul></nav></header>",
-      "mainContent": "<section class='hero'><div style='background-image: url(https://images.pexels.com/photos/123456/original.jpg);'><h2>Welcome to Our Coffee Shop</h2></div><p>Discover the charm of a French cottage-style cafe.</p></section>",
-      "footer": "<footer><p>Contact Us: info@coffeeshop.com</p><ul><li><a href='#'>Facebook</a></li><li><a href='#'>Instagram</a></li><li><a href='#'>Twitter</a></li></ul></footer>"
-    }
-  }
-}
-
-**Important**: Ensure the response contains **only** the properties you have listed above. Do not include any extra properties in the JSON output. The theme and HTML structure should be based solely on the description: \`${themeDesc}\`.`;
+// Base AI client setup
+const initializeAIClient = (): OpenAI => {
+  return new OpenAI({
+    baseURL: 'https://api.x.ai/v1',
+    apiKey: process.env.NEXT_PUBLIC_XAI_API_KEY,
+    dangerouslyAllowBrowser: true,
+  });
 };
 
-export const generateTheme = async ({ themeDesc }: { themeDesc: string }) => {
-  try {
-    const GPT = new OpenAI({
-      baseURL: 'https://api.x.ai/v1',
-      apiKey: process.env.NEXT_PUBLIC_XAI_API_KEY, // Keep this server-side
-      dangerouslyAllowBrowser: true,
-    });
+// Define TypeScript interfaces for the expected return types
+export interface BaseTheme {
+  rounding: 'none' | 'small' | 'medium' | 'large' | string;
+  primaryColor: string; // Hex color code
+  secondaryColor: string; // Hex color code
+  borderColor: string; // Hex color code
+  backgroundColor: string; // Hex color code
+  mainHeaderSize: string; // CSS size value between 28px-40px
+}
 
+export interface ExampleText {
+  header: string; // 4-6 words
+}
+
+export interface ExampleImages {
+  pageBackground: string; // URL to landscape image
+  smallHeaderCompanion: string; // URL to square image
+}
+
+export interface HtmlStructure {
+  header?: string; // HTML string for header
+  mainContent?: string; // HTML string for main content
+  footer?: string; // HTML string for footer
+}
+
+// Theme generation prompt
+const getThemePrompt = (themeDesc: string): string => `
+  You are an experienced website designer with expertise in color palettes and modern styling.
+  Based solely on this description: "${themeDesc}", return a JSON object with:
+  {
+    "rounding": "string", // "none", "small", "medium", "large", or custom px value
+    "primaryColor": "string", // High contrast with background
+    "secondaryColor": "string", // Contrasts with background
+    "borderColor": "string", // Matches theme
+    "backgroundColor": "string", // Primary background
+    "mainHeaderSize": "string" // 28px-40px
+  }
+  Ensure cohesive and visually appealing choices.
+`;
+
+// Content generation prompt
+const getContentPrompt = (themeDesc: string, theme: BaseTheme): string => `
+  Based on "${themeDesc}" and theme ${JSON.stringify(
+  theme
+)}, return a JSON object with:
+  {
+    "exampleText": {
+      "header": "string" // 4-6 words
+    }
+  }
+  Header must be 4-6 words and match the theme.
+`;
+
+// Images generation prompt
+const getImagesPrompt = (themeDesc: string): string => `
+  For "${themeDesc}", generate 3-5 keywords from the description.
+  Using these keywords with the Pexels API, return a JSON object with:
+  {
+    "exampleImages": {
+      "pageBackground": "string", // Landscape image URL
+      "smallHeaderCompanion": "string" // Square image URL
+    }
+  }
+  Use src.original from Pexels. Ensure images match the description's tone.
+`;
+
+// HTML structure prompts
+const getHeaderPrompt = (
+  themeDesc: string,
+  theme: BaseTheme,
+  headerText: string
+): string => `
+  For "${themeDesc}" with theme ${JSON.stringify(
+  theme
+)} and header "${headerText}", return:
+  {
+    "htmlStructure": {
+      "header": "string" // HTML with h1 logo and nav bar
+    }
+  }
+  Style with theme colors, modern padding, and rounding.
+`;
+
+const getMainContentPrompt = (
+  themeDesc: string,
+  theme: BaseTheme,
+  images: ExampleImages
+): string => `
+  For "${themeDesc}" with theme ${JSON.stringify(
+  theme
+)} and images ${JSON.stringify(images)}, return:
+  {
+    "htmlStructure": {
+      "mainContent": "string" // HTML with hero image and text
+    }
+  }
+  Style with theme colors, modern spacing, and include images.
+`;
+
+const getFooterPrompt = (themeDesc: string, theme: BaseTheme): string => `
+  For "${themeDesc}" with theme ${JSON.stringify(theme)}, return:
+  {
+    "htmlStructure": {
+      "footer": "string" // HTML with contact and social links
+    }
+  }
+  Style with theme colors and modern design.
+`;
+
+// Individual generation functions with explicit typing
+export async function generateBaseTheme(themeDesc: string): Promise<BaseTheme> {
+  try {
+    const GPT = initializeAIClient();
     const completion = await GPT.chat.completions.create({
-      model: 'grok-2-1212', // Verify with xAI console; could be 'grok-3'
-      messages: [{ role: 'user', content: getMainGenPrompt({ themeDesc }) }],
-      max_tokens: 1500,
+      model: 'grok-2-1212',
+      messages: [{ role: 'user', content: getThemePrompt(themeDesc) }],
+      max_tokens: 500,
       temperature: 0.7,
-      response_format: { type: 'json_object' }, // Ensures JSON output
+      response_format: { type: 'json_object' },
     });
 
     if (!completion.choices || !completion.choices[0]?.message.content) {
-      throw new Error('No valid response from the AI model.');
+      throw new Error('No valid response from the AI model');
     }
 
-    const results = JSON.parse(
+    const result = JSON.parse(
       completion.choices[0].message.content as string
-    ) as Theme;
-
-    return results;
+    ) as BaseTheme;
+    return result;
   } catch (error) {
-    console.error('Error generating theme:', error);
-    throw new Error('Failed to generate theme. Please try again later.');
+    console.error('Error generating base theme:', error);
+    throw new Error('Failed to generate base theme. Please try again later.');
   }
-};
+}
+
+export async function generateContent(
+  themeDesc: string,
+  theme: BaseTheme
+): Promise<{ exampleText: ExampleText }> {
+  try {
+    const GPT = initializeAIClient();
+    const completion = await GPT.chat.completions.create({
+      model: 'grok-2-1212',
+      messages: [{ role: 'user', content: getContentPrompt(themeDesc, theme) }],
+      max_tokens: 300,
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+    });
+
+    if (!completion.choices || !completion.choices[0]?.message.content) {
+      throw new Error('No valid response from the AI model');
+    }
+
+    const result = JSON.parse(
+      completion.choices[0].message.content as string
+    ) as { exampleText: ExampleText };
+    return result;
+  } catch (error) {
+    console.error('Error generating content:', error);
+    throw new Error('Failed to generate content. Please try again later.');
+  }
+}
+
+export async function generateImages(
+  themeDesc: string
+): Promise<{ exampleImages: ExampleImages }> {
+  try {
+    const GPT = initializeAIClient();
+    const completion = await GPT.chat.completions.create({
+      model: 'grok-2-1212',
+      messages: [{ role: 'user', content: getImagesPrompt(themeDesc) }],
+      max_tokens: 400,
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+    });
+
+    if (!completion.choices || !completion.choices[0]?.message.content) {
+      throw new Error('No valid response from the AI model');
+    }
+
+    const result = JSON.parse(
+      completion.choices[0].message.content as string
+    ) as { exampleImages: ExampleImages };
+    return result;
+  } catch (error) {
+    console.error('Error generating images:', error);
+    throw new Error('Failed to generate images. Please try again later.');
+  }
+}
+
+export async function generateHeader(
+  themeDesc: string,
+  theme: BaseTheme,
+  headerText: string
+): Promise<{ htmlStructure: { header: string } }> {
+  try {
+    const GPT = initializeAIClient();
+    const completion = await GPT.chat.completions.create({
+      model: 'grok-2-1212',
+      messages: [
+        {
+          role: 'user',
+          content: getHeaderPrompt(themeDesc, theme, headerText),
+        },
+      ],
+      max_tokens: 400,
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+    });
+
+    if (!completion.choices || !completion.choices[0]?.message.content) {
+      throw new Error('No valid response from the AI model');
+    }
+
+    const result = JSON.parse(
+      completion.choices[0].message.content as string
+    ) as { htmlStructure: { header: string } };
+    return result;
+  } catch (error) {
+    console.error('Error generating header:', error);
+    throw new Error('Failed to generate header. Please try again later.');
+  }
+}
+
+export async function generateMainContent(
+  themeDesc: string,
+  theme: BaseTheme,
+  images: ExampleImages
+): Promise<{ htmlStructure: { mainContent: string } }> {
+  try {
+    const GPT = initializeAIClient();
+    const completion = await GPT.chat.completions.create({
+      model: 'grok-2-1212',
+      messages: [
+        {
+          role: 'user',
+          content: getMainContentPrompt(themeDesc, theme, images),
+        },
+      ],
+      max_tokens: 500,
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+    });
+
+    if (!completion.choices || !completion.choices[0]?.message.content) {
+      throw new Error('No valid response from the AI model');
+    }
+
+    const result = JSON.parse(
+      completion.choices[0].message.content as string
+    ) as { htmlStructure: { mainContent: string } };
+    return result;
+  } catch (error) {
+    console.error('Error generating main content:', error);
+    throw new Error('Failed to generate main content. Please try again later.');
+  }
+}
+
+export async function generateFooter(
+  themeDesc: string,
+  theme: BaseTheme
+): Promise<{ htmlStructure: { footer: string } }> {
+  try {
+    const GPT = initializeAIClient();
+    const completion = await GPT.chat.completions.create({
+      model: 'grok-2-1212',
+      messages: [{ role: 'user', content: getFooterPrompt(themeDesc, theme) }],
+      max_tokens: 300,
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+    });
+
+    if (!completion.choices || !completion.choices[0]?.message.content) {
+      throw new Error('No valid response from the AI model');
+    }
+
+    const result = JSON.parse(
+      completion.choices[0].message.content as string
+    ) as { htmlStructure: { footer: string } };
+    return result;
+  } catch (error) {
+    console.error('Error generating footer:', error);
+    throw new Error('Failed to generate footer. Please try again later.');
+  }
+}

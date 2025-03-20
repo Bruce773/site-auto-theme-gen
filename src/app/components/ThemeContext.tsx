@@ -1,46 +1,20 @@
 'use client';
 
 import React, { createContext, useState, ReactNode } from 'react';
-
-export interface Theme {
-  rounding: string;
-  primaryColor: string;
-  secondaryColor: string;
-  borderColor: string;
-  backgroundColor: string;
-  mainHeaderSize: string;
-  exampleContent: {
-    exampleText: { header: string };
-    exampleImages: { pageBackground: string; smallHeaderCompanion: string };
-    htmlStructure: {
-      header?: string;
-      mainContent?: string;
-      footer?: string;
-    };
-  };
-}
+import { BaseTheme } from '@/app/generator';
 
 interface ThemeContextProps {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
+  theme: BaseTheme;
+  setTheme: (theme: BaseTheme) => void;
 }
 
-const defaultTheme: Theme = {
+const defaultTheme: BaseTheme = {
   rounding: '4px',
   primaryColor: '#007bff',
   secondaryColor: '#5bc0de',
   borderColor: '#007bff',
   backgroundColor: '#ade5ff3f',
   mainHeaderSize: '22px',
-  exampleContent: {
-    exampleText: { header: '' },
-    exampleImages: { pageBackground: '', smallHeaderCompanion: '' },
-    htmlStructure: {
-      header: '',
-      mainContent: '',
-      footer: '',
-    },
-  },
 };
 
 const ThemeContext = createContext<ThemeContextProps>({
@@ -49,7 +23,7 @@ const ThemeContext = createContext<ThemeContextProps>({
 });
 
 const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>(defaultTheme);
+  const [theme, setTheme] = useState<BaseTheme>(defaultTheme);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>

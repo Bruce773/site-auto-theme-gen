@@ -1,12 +1,13 @@
 import { useContext } from 'react';
-import { Theme, ThemeContext } from './ThemeContext';
+import { ThemeContext } from '@/app/components/ThemeContext';
+import { BaseTheme } from '@/app/generator';
 
 export const ThemeDrawer = () => {
   const { theme } = useContext(ThemeContext);
 
   const themePropsList = Object.keys(theme);
 
-  const getThemePropVal = (themeProp: keyof Theme) =>
+  const getThemePropVal = (themeProp: keyof BaseTheme) =>
     theme[themeProp] as string;
 
   return (
@@ -24,19 +25,21 @@ export const ThemeDrawer = () => {
                 padding: '0px 5px',
                 color:
                   themeProp === 'primaryColor' || themeProp === 'secondaryColor'
-                    ? getThemePropVal(themeProp as keyof Theme)
+                    ? getThemePropVal(themeProp as keyof BaseTheme)
                     : 'black',
                 backgroundColor:
                   themeProp === 'backgroundColor'
-                    ? getThemePropVal(themeProp as keyof Theme)
+                    ? getThemePropVal(themeProp as keyof BaseTheme)
                     : '',
                 border:
                   themeProp === 'borderColor'
-                    ? `solid 2px ${getThemePropVal(themeProp as keyof Theme)}`
+                    ? `solid 2px ${getThemePropVal(
+                        themeProp as keyof BaseTheme
+                      )}`
                     : '',
               }}
             >
-              {getThemePropVal(themeProp as keyof Theme)}
+              {getThemePropVal(themeProp as keyof BaseTheme)}
             </div>
           </div>
         ))}
