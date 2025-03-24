@@ -12,10 +12,9 @@ import {
   generateMainContent,
   generateFooter,
 } from '@/generator';
-import { BaseTheme, ExampleText, ExampleImages } from '@/types';
+import { ExampleText, ExampleImages } from '@/types';
 
 type GeneratedData = {
-  theme: BaseTheme | null;
   content: ExampleText | null;
   images: ExampleImages | null;
   headerHtml: string | null;
@@ -27,7 +26,6 @@ export default function Home() {
   const { theme, setTheme } = useContext(ThemeContext);
   const [prompt, setPrompt] = useState('');
   const [data, setData] = useState<GeneratedData>({
-    theme: null,
     content: null,
     images: null,
     headerHtml: null,
@@ -42,7 +40,6 @@ export default function Home() {
     setStatus('loading');
     setErrorMessage(null);
     setData({
-      theme: null,
       content: null,
       images: null,
       headerHtml: null,
@@ -51,17 +48,13 @@ export default function Home() {
     });
 
     try {
-      // Step 1: Generate and set theme
       const theme = await generateBaseTheme(prompt);
       setTheme(theme);
-      setData(d => ({ ...d, theme }));
 
-      // Step 2: Generate and set content
       const contentResult = await generateContent(prompt, theme);
       const content = contentResult.exampleText;
       setData(d => ({ ...d, content }));
 
-      // Step 3: Generate images and header in parallel
       const [imagesResult, headerResult] = await Promise.all([
         generateImages(prompt),
         generateHeader(prompt, theme, content.header),
@@ -72,7 +65,6 @@ export default function Home() {
         headerHtml: headerResult.htmlStructure.header,
       }));
 
-      // Ensure imagesForMainContent is always defined
       const imagesForMainContent = imagesResult.exampleImages || {
         pageBackground:
           'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg',
@@ -80,7 +72,6 @@ export default function Home() {
           'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg',
       };
 
-      // Step 4: Generate main content and footer in parallel
       const [mainContentResult, footerResult] = await Promise.all([
         generateMainContent(prompt, theme, imagesForMainContent),
         generateFooter(prompt, theme),
@@ -134,7 +125,7 @@ export default function Home() {
             fontSize: '20px',
           }}
         >
-          {status === 'loading' ? 'Loading...' : 'Generate'}
+          {status === 'loading' ? 'Loading...' : 'Create'}
         </button>
       </div>
       {status === 'error' && (
