@@ -101,13 +101,12 @@ export const ThemeDrawer = () => {
             onKeyDown={e => e.metaKey && e.key === 'Enter' && generate()}
             placeholder='A construction site with orange as the primary color...'
             rows={4}
+            className='rounded-md border-2 border-blue-500'
             style={{
-              border: `solid 3px ${theme.borderColor}`,
-              borderRadius: theme.rounding,
               color: theme.primaryColor,
               fontSize: '16px',
               padding: '18px',
-              width: '200px',
+              width: '250px',
               height: '300px',
             }}
           />
@@ -144,44 +143,37 @@ export const ThemeDrawer = () => {
               <span className='ml-2 text-gray-500'>Generating...</span>
             </div>
           )}
-          {showInput && (
-            <button
-              onClick={() => {
-                setShowInput(false);
-                setPrompt('');
-                setErrorMessage(null);
-                setSuccessMessage(null);
-              }}
-              style={{
-                marginTop: '20px',
-                backgroundColor:
-                  status === 'loading' ? 'grey' : theme.primaryColor,
-                borderColor: theme.borderColor,
-                color: 'white',
-                padding: '5px 10px',
-                borderRadius: theme.rounding,
-                fontSize: '18px',
-              }}
-            >
-              Cancel
-            </button>
-          )}
         </div>
       ) : null}
-      <div
-        onClick={handleMagic}
-        className='shadow-md rounded-full p-4 mt-3 flex flex-row items-center justify-center text-blue-500 w-fit hover:shadow-xl transition-shadow duration-200 cursor-pointer font-bold'
-        aria-label={
-          showInput ? 'Regenerate theme' : 'Open theme regeneration input'
-        }
-      >
-        {showInput ? (
-          <div className='flex items-center gap-2'>
+      <div className='flex flex-row items-center mt-3'>
+        <div
+          onClick={handleMagic}
+          className='shadow-md rounded-full p-4 flex flex-row items-center justify-center text-blue-500 w-fit hover:shadow-xl transition-all duration-200 cursor-pointer font-bold border-solid border-2 border-blue-500 hover:bg-gray-50'
+          aria-label={
+            showInput ? 'Regenerate theme' : 'Open theme regeneration input'
+          }
+        >
+          {showInput ? (
+            <div className='flex items-center gap-2'>
+              <HiSparkles />
+              Regenerate
+            </div>
+          ) : (
             <HiSparkles />
-            Regenerate
-          </div>
-        ) : (
-          <HiSparkles />
+          )}
+        </div>
+        {showInput && (
+          <button
+            onClick={() => {
+              setShowInput(false);
+              setPrompt('');
+              setErrorMessage(null);
+              setSuccessMessage(null);
+            }}
+            className={`py-2 px-3 ml-2 text-blue-500 font-[18px]`}
+          >
+            Cancel
+          </button>
         )}
       </div>
     </div>
