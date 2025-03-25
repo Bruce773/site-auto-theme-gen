@@ -4,10 +4,13 @@ import { ThemeContext } from '@/components/ThemeContext';
 import { BaseTheme } from '@/types';
 import { generateBaseTheme } from '@/generator';
 import { HiSparkles } from 'react-icons/hi2';
+import { FaRegCopy } from 'react-icons/fa6';
 
 export const ThemeDrawer = () => {
   const { theme, setTheme } = useContext(ThemeContext);
-  const [showInput, setShowInput] = useState(false);
+  const [activePanel, setActivePanel] = useState<
+    'none' | 'regenerate' | 'json'
+  >('none');
   const [prompt, setPrompt] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -18,14 +21,6 @@ export const ThemeDrawer = () => {
   const getThemePropVal = (themeProp: keyof BaseTheme) =>
     theme[themeProp] as string;
 
-  const handleMagic = () => {
-    if (!showInput) {
-      setShowInput(true);
-    } else {
-      generate();
-    }
-  };
-
   const generate = async () => {
     if (!prompt) return;
     setStatus('loading');
@@ -33,12 +28,10 @@ export const ThemeDrawer = () => {
     setSuccessMessage(null);
 
     try {
-      // Include current theme in the prompt
       const currentThemeDetails = Object.entries(theme)
         .filter(([key]) => key !== 'exampleContent')
         .map(([key, value]) => `${key}: ${value}`)
         .join(', ');
-
       const enhancedPrompt = `${prompt}\n\nCurrent theme: ${currentThemeDetails}`;
       const newTheme = await generateBaseTheme(enhancedPrompt, theme);
 
@@ -47,7 +40,7 @@ export const ThemeDrawer = () => {
       setStatus('idle');
       setTimeout(() => {
         setSuccessMessage(null);
-        setShowInput(false);
+        setActivePanel('none');
         setPrompt('');
       }, 1500);
     } catch (error) {
@@ -61,8 +54,24 @@ export const ThemeDrawer = () => {
     }
   };
 
+  const copyThemeJson = () => {
+    const themeJson = JSON.stringify(theme, null, 2);
+    navigator.clipboard
+      .writeText(themeJson)
+      .then(() => {
+        alert('Theme JSON copied to clipboard!');
+      })
+      .catch(err => {
+        console.error('Failed to copy:', err);
+      });
+  };
+
   return (
-    <div className='h-full flex-col bg-white p-10 flex'>
+    <div
+      className={`h-full flex-col bg-white p-10 flex transition-all duration-300 ${
+        activePanel === 'none' ? 'w-1/4' : 'w-1/3'
+      }`}
+    >
       <h2 className='mb-6 text-black text-xl font-bold'>Theme Styles</h2>
       {themePropsList
         .filter(item => item !== ('exampleContent' as keyof BaseTheme))
@@ -93,8 +102,30 @@ export const ThemeDrawer = () => {
           </div>
         ))}
       <div className='mb-10' />
-      {showInput ? (
-        <div className='flex flex-col items-start'>
+
+      {/* Initial Buttons */}
+      {activePanel === 'none' && (
+        <div className='flex flex-row items-center mt-3 gap-6'>
+          <div
+            onClick={() => setActivePanel('regenerate')}
+            className='shadow-md rounded-full p-4 flex flex-row items-center justify-center text-blue-500 w-fit hover:shadow-xl transition-all duration-200 cursor-pointer font-bold border-solid border-2 border-blue-500 hover:bg-gray-50'
+            aria-label='Open theme regeneration input'
+          >
+            <HiSparkles />
+          </div>
+          <div
+            onClick={() => setActivePanel('json')}
+            className='flex flex-row items-center justify-center text-gray-800 w-fit hover:shadow-md hover:bg-gray-50 transition-all duration-200 cursor-pointer text-lg p-4 rounded-full'
+            aria-label='Show theme JSON'
+          >
+            <FaRegCopy />
+          </div>
+        </div>
+      )}
+
+      {/* Regenerate Panel */}
+      {activePanel === 'regenerate' && (
+        <div className='flex flex-col items-start mt-3'>
           <textarea
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
@@ -143,39 +174,62 @@ export const ThemeDrawer = () => {
               <span className='ml-2 text-gray-500'>Generating...</span>
             </div>
           )}
+          <div className='flex flex-row items-center mt-2 gap-2'>
+            <button
+              onClick={generate}
+              className='shadow-md rounded-full p-4 flex flex-row items-center justify-center text-blue-500 w-fit hover:shadow-xl transition-all duration-200 cursor-pointer font-bold border-solid border-2 border-blue-500 hover:bg-gray-50 gap-2'
+              aria-label='Regenerate theme'
+            >
+              <HiSparkles /> Regenerate
+            </button>
+            <button
+              onClick={() => {
+                setActivePanel('none');
+                setPrompt('');
+                setErrorMessage(null);
+                setSuccessMessage(null);
+              }}
+              className='py-2 px-3 text-blue-500 font-[18px] hover:bg-gray-50 rounded-md transition-all duration-200'
+              aria-label='Cancel theme regeneration'
+            >
+              Cancel
+            </button>
+          </div>
         </div>
-      ) : null}
-      <div className='flex flex-row items-center mt-3'>
-        <div
-          onClick={handleMagic}
-          className='shadow-md rounded-full p-4 flex flex-row items-center justify-center text-blue-500 w-fit hover:shadow-xl transition-all duration-200 cursor-pointer font-bold border-solid border-2 border-blue-500 hover:bg-gray-50'
-          aria-label={
-            showInput ? 'Regenerate theme' : 'Open theme regeneration input'
-          }
-        >
-          {showInput ? (
-            <div className='flex items-center gap-2'>
-              <HiSparkles />
-              Regenerate
-            </div>
-          ) : (
-            <HiSparkles />
-          )}
-        </div>
-        {showInput && (
-          <button
-            onClick={() => {
-              setShowInput(false);
-              setPrompt('');
-              setErrorMessage(null);
-              setSuccessMessage(null);
+      )}
+
+      {/* JSON Panel */}
+      {activePanel === 'json' && (
+        <div className='mt-3'>
+          <pre
+            style={{
+              backgroundColor: '#000000',
+              padding: '10px',
+              borderRadius: '5px',
+              overflowX: 'auto',
+              color: 'white',
             }}
-            className={`py-2 px-3 ml-2 text-blue-500 font-[18px]`}
           >
-            Cancel
-          </button>
-        )}
-      </div>
+            {JSON.stringify(theme, null, 2)}
+          </pre>
+          <div className='flex flex-row items-center mt-2 gap-2'>
+            <button
+              onClick={copyThemeJson}
+              className='shadow-md rounded-md py-2 px-4 flex flex-row items-center justify-center text-black w-fit hover:shadow-xl transition-all duration-200 cursor-pointer font-bold border-solid border-2 border-gray-700 hover:bg-gray-50 gap-2'
+              aria-label='Copy theme JSON to clipboard'
+            >
+              <FaRegCopy /> Copy
+            </button>
+            <button
+              onClick={() => setActivePanel('none')}
+              className='py-2 px-3 text-gray-700 font-[18px] hover:bg-gray-50 rounded-md transition-all duration-200'
+              aria-label='Close JSON view'
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
