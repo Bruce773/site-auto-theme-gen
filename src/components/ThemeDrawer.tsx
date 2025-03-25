@@ -22,10 +22,7 @@ export const ThemeDrawer = () => {
     if (!showInput) {
       setShowInput(true);
     } else {
-      setShowInput(false);
-      setPrompt('');
-      setErrorMessage(null);
-      setSuccessMessage(null);
+      generate();
     }
   };
 
@@ -36,7 +33,15 @@ export const ThemeDrawer = () => {
     setSuccessMessage(null);
 
     try {
-      const newTheme = await generateBaseTheme(prompt);
+      // Include current theme in the prompt
+      const currentThemeDetails = Object.entries(theme)
+        .filter(([key]) => key !== 'exampleContent')
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(', ');
+
+      const enhancedPrompt = `${prompt}\n\nCurrent theme: ${currentThemeDetails}`;
+      const newTheme = await generateBaseTheme(enhancedPrompt, theme);
+
       setTheme(newTheme);
       setSuccessMessage('Theme updated successfully!');
       setStatus('idle');
